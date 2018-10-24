@@ -1,5 +1,6 @@
 'use strict';
 
+// Set up server
 const express = require('express');
 const cors = require('cors');
 const superagent = require('superagent');
@@ -14,90 +15,12 @@ app.use(cors());
 
 app.listen(PORT, () => console.log(`App is up on $ PORT`));
 
-app.get('/location', (request, response, next) => {
-  getLocation(request.query.data)
-    .then(locationData => response.send(locationData))
-    .catch(error => handleError(error, response));
-
-});
-
-function getLocation(query) {
-  // console.log('This is happeing.');
-  const _URL = `https://maps.googleapis.com/maps/api/geocode/json?address=${query}&key=${process.env.GEOCODE_API_KEY}`;
-  return superagent.get(_URL)
-    .then(data => {
-      if (! data.body.results.length) {throw 'No data'}
-      else {
-        let location = new Location(data.body.results[0]);
-        location.search_query = query;
-        console.log(location);
-        return location;
-      }
-    });
-}
-
-function handleError(err, res) {
-  console.error('ERR', err);
-  if (res) res.status(500).send('Sorry, something went wrong.');
-}
-
-
-app.get('/weather', getWeather);
-
-app.get('/yelp', getYelp);
-
-app.get('/movies', getMovies);
-
-function getYelp(request, response) {
-  const _URL = `https://api.yelp.com/v3/businesses/search?latitude=${request.query.data.latitude};longitude=${request.query.data.longitude}`;
-  return superagent.get(_URL)
-    .set({'Authorization': `Bearer ${process.env.YELP_API_KEY}`})
-    .then(result => {
-      const businesses = [];
-      result.body.businesses.forEach(biz => {
-        businesses.push(new Yelp(biz));
-      })
-      response.send(businesses);
-    })
-    .catch(error => handleError(error ,response));
-}
-
-
-function getWeather(request, response) {
-  const _URL = `https://api.darksky.net/forecast/${process.env.WEATHER_API_KEY}/${request.query.data.latitude},${request.query.data.longitude}`;
-  return superagent.get(_URL)
-    .then(result => {
-      const weatherSummaries = [];
-      result.body.daily.data.forEach(day => {
-        const summary = new Weather(day);
-        weatherSummaries.push(summary);
-      });
-      response.send(weatherSummaries);
-    })
-    .catch(error => handleError(error ,response));
-}
-
-
-function getMovies(request, response) {
-  const city = request.query.data.formatted_query.split(',')[0];
-  const _URL = `https://api.themoviedb.org/3/search/movie?api_key=${process.env.MOVIEDB_API_KEY}&query=${city}`;
-  return superagent.get(_URL)
-    .then(result => {
-      const movies = [];
-      result.body.results.forEach(movie => {
-        movies.push(new Movie(movie));
-      });
-      response.send(movies);
-    })
-    .catch(error => handleError(error ,response));
-}
-
+// Define objects
 function Location(data) {
   this.formatted_query = data.formatted_address;
   this.latitude = data.geometry.location.lat;
   this.longitude = data.geometry.location.lng;
 }
-
 
 function Weather(day) {
   this.forecast = day.summary;
@@ -120,4 +43,82 @@ function Movie(movie) {
   this.image_url = `https://image.tmdb.org/t/p/w200_and_h300_bestv2${movie.poster_path}`;
   this.popularity = movie.popularity;
   this.released_on = movie.release_date;
+}
+
+// Call event listeners
+
+app.get('/location', (request, response, next) => {
+  getLocation(request.query.data)
+    .then(locationData => response.send(locationData))
+    .catch(error => handleError(error, response));
+
+});
+
+app.get('/weather', getWeather);
+
+app.get('/yelp', getYelp);
+
+app.get('/movies', getMovies);
+
+// Define event handlers
+
+function getLocation(query) {
+  const _URL = `https://maps.googleapis.com/maps/api/geocode/json?address=${query}&key=${process.env.GEOCODE_API_KEY}`;
+  return superagent.get(_URL)
+    .then(data => {
+      if (! data.body.results.length) {throw 'No data'}
+      else {
+        let location = new Location(data.body.results[0]);
+        location.search_query = query;
+        console.log(location);
+        return location;
+      }
+    });
+}
+
+function handleError(err, res) {
+  console.error('ERR', err);
+  if (res) res.status(500).send('Sorry, something went wrong.');
+}
+
+function getYelp(request, response) {
+  const _URL = `https://api.yelp.com/v3/businesses/search?latitude=${request.query.data.latitude}&longitude=${request.query.data.longitude}`;
+  return superagent.get(_URL)
+    .set({'Authorization': `Bearer ${process.env.YELP_API_KEY}`})
+    .then(result => {
+      const businesses = [];
+      result.body.businesses.forEach(biz => {
+        businesses.push(new Yelp(biz));
+      })
+      response.send(businesses);
+    })
+    .catch(error => handleError(error ,response));
+}
+
+function getWeather(request, response) {
+  const _URL = `https://api.darksky.net/forecast/${process.env.WEATHER_API_KEY}/${request.query.data.latitude},${request.query.data.longitude}`;
+  return superagent.get(_URL)
+    .then(result => {
+      const weatherSummaries = [];
+      result.body.daily.data.forEach(day => {
+        const summary = new Weather(day);
+        weatherSummaries.push(summary);
+      });
+      response.send(weatherSummaries);
+    })
+    .catch(error => handleError(error ,response));
+}
+
+function getMovies(request, response) {
+  const city = request.query.data.formatted_query.split(',')[0];
+  const _URL = `https://api.themoviedb.org/3/search/movie?api_key=${process.env.MOVIEDB_API_KEY}&query=${city}`;
+  return superagent.get(_URL)
+    .then(result => {
+      const movies = [];
+      result.body.results.forEach(movie => {
+        movies.push(new Movie(movie));
+      });
+      response.send(movies);
+    })
+    .catch(error => handleError(error ,response));
 }
