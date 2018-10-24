@@ -7,13 +7,13 @@ const superagent = require('superagent');
 
 require('dotenv').config();
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT;
 
 const app = express();
 
 app.use(cors());
 
-app.listen(PORT, () => console.log(`App is up on $ PORT`));
+app.listen(PORT, () => console.log(`App is up on ${PORT}`));
 
 // Define objects
 function Location(data) {
